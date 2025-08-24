@@ -169,7 +169,6 @@ export default function ReferendumVotePage() {
                 </button>
               ))}
             </form>
-
             {message && (
               <p className="mt-4 text-center text-sm font-medium text-red-500">{message}</p>
             )}
