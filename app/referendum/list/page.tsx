@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -6,35 +7,52 @@ import { useAccount } from "wagmi";
 import { supabase } from "../../api/client";
 
 type Referendum = {
-  id: number;
+  id: string;
   question: string;
   link: string;
   deadline: string;
   owner_wallet: string;
   options: string[];
+  votes?: Record<string, number>; 
 };
 
 export default function ReferendumList() {
   const { address, isConnected } = useAccount();
   const [referendums, setReferendums] = useState<Referendum[]>([]);
   const [loading, setLoading] = useState(false);
-  const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchMyReferendums = async () => {
       if (!isConnected || !address) return;
       setLoading(true);
 
-      const { data, error } = await supabase
+      const { data: refs, error } = await supabase
         .from("referendums")
         .select("*")
         .eq("owner_wallet", address)
-        .order("id", { ascending: false });
+        .order("created_at", { ascending: false });
 
       if (error) {
         console.error("Error fetching referendums:", error);
-      } else if (data) {
-        setReferendums(data as Referendum[]);
+      } else if (refs) {
+        const refsWithVotes = await Promise.all(
+          refs.map(async (ref: any) => {
+            const { data: votesData } = await supabase
+              .from("votes")
+              .select("selected_option")
+              .eq("referendum_id", ref.id);
+
+            const votesCount: Record<string, number> = {};
+            ref.options.forEach((opt: string) => {
+              votesCount[opt] = votesData?.filter((v: any) => v.selected_option === opt).length || 0;
+            });
+
+            return { ...ref, votes: votesCount };
+          })
+        );
+
+        setReferendums(refsWithVotes);
       }
 
       setLoading(false);
@@ -43,10 +61,10 @@ export default function ReferendumList() {
     fetchMyReferendums();
   }, [isConnected, address]);
 
-  const handleShare = (link?: string, id?: number) => {
+  const handleShare = (link?: string, id?: string) => {
     if (!link) return;
     try {
-      const fullUrl = `${window.location.origin}/referendum/${link}`;
+      const fullUrl = `${window.location.origin}/referendum/view/${link}`;
       navigator.clipboard.writeText(fullUrl);
       setCopiedId(id || null);
       setTimeout(() => setCopiedId(null), 2000);
@@ -74,6 +92,17 @@ export default function ReferendumList() {
               <p className="text-sm text-gray-500">
                 Deadline: {new Date(ref.deadline).toLocaleString()}
               </p>
+
+              {/* Votes display */}
+              {ref.votes && (
+                <div className="flex gap-4 text-sm text-gray-700 mt-2">
+                  {Object.entries(ref.votes).map(([option, count]) => (
+                    <span key={option}>
+                      {option}: <strong>{count}</strong>
+                    </span>
+                  ))}
+                </div>
+              )}
 
               <div className="flex gap-2 mt-2">
                 <Link
