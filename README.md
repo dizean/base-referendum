@@ -1,6 +1,12 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-onchain`]().
 
 
+ABOUT THE APP
+
+ITS A SIMPLE REFERENDUM APP THAT RELIES ON WALLET ADDRESS FOR VALIDITY OF EACH VOTES.
+ADDRESS ARE MADE USE TO BE AN IDENTITY TO EACH AND TO AVOID  MANIPULATION OF VOTES.
+
+
 ## Getting Started
 
 First, install dependencies:
